@@ -1,0 +1,14 @@
+flute
+car
+chair
+door
+mattress
+shoes
+bell
+visor
+pants
+laces
+napkins
+nails
+hammer
+shovel
