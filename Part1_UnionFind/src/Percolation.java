@@ -1,6 +1,9 @@
 import edu.princeton.cs.algs4.StdRandom;
 import edu.princeton.cs.algs4.WeightedQuickUnionUF;
 
+import java.util.Scanner;
+import java.util.concurrent.TimeUnit;
+
 public class Percolation {
     // I will try to flatten the 2d array into a 1d array
     //
@@ -50,7 +53,6 @@ public class Percolation {
             fillSite(0,index);
     }
 
-
     public boolean isOpen( int row, int column ){
         return isOpen(index(row,column));
     }
@@ -84,9 +86,11 @@ public class Percolation {
         else unionFindGrid.union(0,flattenIndexNeighbour+1);
     }
 
-    private void tryToFill (int previousFlatIndex,int row, int column){
+    private void tryToFill (int previousFlatIndex,int row, int column) throws InterruptedException {
         int index = index(row,column);
-        if (validToFill(previousFlatIndex,row,column)) fillSite(previousFlatIndex,index);
+        if (validToFill(previousFlatIndex,row,column)) {
+            fillSite(previousFlatIndex,index);
+        }
         if ( validToFill(index,row-1,column) ) tryToFill(index,row-1,column);
         if ( validToFill(index,row+1,column) ) tryToFill(index,row+1,column);
         if ( validToFill(index,row,column-1 )) tryToFill(index, row,column-1);
@@ -102,30 +106,26 @@ public class Percolation {
         return this.openSites;
     }
 
-    public boolean percolates(){
-        for (int i=2; i<=edgeLength;i++)
-                tryToFill(index(1,i),2,i);
-        for (int column=0; column<=edgeLength; column++)
-            if (isFull(edgeLength,column)) return true;
+    public boolean percolates() throws InterruptedException {
+        for (int col=1; col<=edgeLength;col++) if(isFull(1,col))
+                tryToFill(index(1,col),2,col);
+        for (int col=1; col<=edgeLength; col++)
+            if (isFull(edgeLength,col)) return true;
         return false;
     }
 
 
-    public static void main(String[] args) {
+    public static void main(String[] args) throws InterruptedException {
 
-        Percolation p = new Percolation(60);
-//        p.print2DArray();
-//        System.out.println(p.valueAt( 3, 7));
-//        percolation.valueAt(0,1);
+        Percolation p = new Percolation(25);
         for (int i = 1; i <= p.array1DLength - (p.array1DLength / 7); i++)
             p.open(StdRandom.uniformInt(1, p.edgeLength + 1), StdRandom.uniformInt(1, p.edgeLength + 1));
         System.out.println(p.percolates());
         p.print2DArray();
-        System.out.println("First row is full results");
-
         Percolation a = new Percolation(60);
     }
-    private void print2DArray(){
+    private void print2DArray() throws InterruptedException {
+        TimeUnit.MILLISECONDS.sleep(100);
         // USING ANSI escape codes to print colored text
         String CYAN = "\u001B[36m";
         String RED = "\u001B[31m";
@@ -133,7 +133,6 @@ public class Percolation {
         String CYAN_BKGRND = "\u001B[48;5;45m";
         String WHT_BKGRND = "\u001B[48;5;195m";
         String BLCK_BKGRND = "\u001B[48;5;16m";
-
         for (int row=1; row<=edgeLength; row++){
             for (int col=1; col<=edgeLength; col++) {
                 if (isFull(row, col)) System.out.print( CYAN_BKGRND + "   " );
