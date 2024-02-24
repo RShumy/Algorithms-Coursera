@@ -3,6 +3,7 @@ import edu.princeton.cs.algs4.WeightedQuickUnionUF;
 public class Percolation {
     private final boolean[] grid;
     private final WeightedQuickUnionUF unionFindGrid;
+    private final WeightedQuickUnionUF unionFindTopAndBottom;
     private final int edgeLength;
     private final int array1DLength;
     private int openSites = 0;
@@ -12,7 +13,8 @@ public class Percolation {
         this.edgeLength = n;
         this.array1DLength = n*n;
         grid = new boolean[ array1DLength ];
-        this.unionFindGrid = new WeightedQuickUnionUF(array1DLength+2);
+        this.unionFindGrid = new WeightedQuickUnionUF(array1DLength+1);
+        this.unionFindTopAndBottom = new WeightedQuickUnionUF(array1DLength+2);
         for (int i = 0; i < array1DLength; i++) {
             grid[i] = false;
         }
@@ -34,8 +36,9 @@ public class Percolation {
             return;
         openSites++;
         grid[index] = true;
-        if ( row == 1 ) unionFindGrid.union(index(row, column)+1, 0);
-        if ( row == edgeLength ) unionFindGrid.union( index(row, column)+1, array1DLength+1 );
+        if ( row == 1 ) {unionFindGrid.union(index(row, column)+1, 0);
+        unionFindTopAndBottom.union(index(row, column)+1, 0);}
+        if ( row == edgeLength ) unionFindTopAndBottom.union( index(row, column)+1, array1DLength+1 );
         tryToFill(row, column, row-1, column);
         tryToFill(row, column, row, column-1);
         tryToFill(row, column, row+1, column);
@@ -58,6 +61,7 @@ public class Percolation {
 
     private void fillSite(int flattenIndex, int flattenIndexNeighbour) {
         unionFindGrid.union(flattenIndex + 1, flattenIndexNeighbour + 1);
+        unionFindTopAndBottom.union( flattenIndex + 1, flattenIndexNeighbour + 1);
     }
 
     private void tryToFill (int previousR, int previousC, int row, int column) {
@@ -71,9 +75,7 @@ public class Percolation {
     }
 
     public boolean percolates() {
-        for (int col = 1; col <= edgeLength; col++)
-            if ( isFull(edgeLength,col) ) return true;
-        return false;
+        return unionFindTopAndBottom.find(0) == unionFindTopAndBottom.find(array1DLength +1);
     }
 
     private boolean isOutOfBounds(int row, int column) {
