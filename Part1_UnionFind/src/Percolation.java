@@ -1,102 +1,73 @@
 import edu.princeton.cs.algs4.StdRandom;
 import edu.princeton.cs.algs4.WeightedQuickUnionUF;
-
 public class Percolation {
-    // I will try to flatten the 2d array into a 1d array
-    //
-    // if we define a 2d array by totalRows(height) and totalColumns(width)
-    //      --------------------
-    //      |                  | <-height
-    //      ------width---------
-    // making a row, column index check transposed into 1d:
-    // 1D array index = row * totalColumns + column
-
-    private boolean[] grid;
-    private WeightedQuickUnionUF unionFindGrid;
-    private int edgeLength;
-    private int array1DLength;
+    private final boolean[] grid;
+    private final WeightedQuickUnionUF unionFindGrid;
+    private final WeightedQuickUnionUF unionFindTopAndBottom;
+    private final int edgeLength;
+    private final int array1DLength;
     private int openSites = 0;
 
-    // percolation would work in the context of a 2d square matrix,
-    // but we will work with a flattened version
     public Percolation(int n) {
-        if (n <= 0) exception("Cont construct a matrix of length below or equal to 0");
+        if (n <= 0) throw new IllegalArgumentException("Cannot construct a Matrix of length below or equal to 0");
         this.edgeLength = n;
         this.array1DLength = n*n;
         grid = new boolean[ array1DLength ];
+        this.unionFindGrid = new WeightedQuickUnionUF(array1DLength+1);
+        this.unionFindTopAndBottom = new WeightedQuickUnionUF(array1DLength+2);
         for (int i = 0; i < array1DLength; i++) {
-            // initializing the grid to 0
             grid[i] = false;
-            this.unionFindGrid = new WeightedQuickUnionUF(array1DLength+1);
         }
     }
 
-    private void exception(String message) {
-        throw new IllegalArgumentException(message);
+    private void exception(int row, int column) {
+        throw new IllegalArgumentException(String.format("Row %d or Column %d is out of Bounds for Length %d", row, column, edgeLength));
     }
-    // made to apply to natural index assignment from 1 to n, not from 0 to n-1
+
     private int index(int row, int column) {
-        // subtracting 1 from row to adjust for flatten index
         if (isOutOfBounds(row, column))
-            exception(String.format("Row %d or Column %d is out of Bounds for Length %d", row, column, edgeLength));
+            exception(row, column);
         return (row-1) * edgeLength + (column-1);
     }
 
     public void open(int row, int column) {
         int index = index(row, column);
-        if (!grid[index]) openSites++;
+        if (grid[index])
+            return;
+        openSites++;
         grid[index] = true;
-        if (row == 1 && column <= edgeLength)
-            fillSite(0,index);
+        if ( row == 1 ) {unionFindGrid.union(index(row, column)+1, 0);
+        unionFindTopAndBottom.union(index(row, column)+1, 0);}
+        if ( row == edgeLength ) unionFindTopAndBottom.union( index(row, column)+1, array1DLength+1 );
+        tryToFill(row, column, row-1, column);
+        tryToFill(row, column, row, column-1);
+        tryToFill(row, column, row+1, column);
+        tryToFill(row, column, row, column+1);
     }
 
     public boolean isOpen(int row, int column) {
-        return isOpen(index(row, column));
+        return grid[index(row, column)];
     }
 
-    private boolean isOpen (int flattenIndex) {
-        if (flattenIndex == array1DLength) return grid[flattenIndex-1];
-        return grid[flattenIndex];
-    }
-    
-    public boolean isFull( int row, int column) {
-        if (!isOutOfBounds(row, column))
-            return isFull(index(row, column));
-        else return false;
+    public boolean isFull(int row, int column) {
+        return unionFindGrid.find(index(row, column)+1) == unionFindGrid.find(0);
     }
 
-    private boolean isFull(int flattenIndex) {
-        if (flattenIndex == array1DLength) return unionFindGrid.find(flattenIndex) == 0;
-        return unionFindGrid.find(flattenIndex+1) == 0;
+    private boolean validToFill(int row, int column) {
+        if ( isOutOfBounds(row, column) )
+            return false;
+        return isOpen(row, column);
     }
 
-    private boolean validToFill(int previousFlattenIndex, int row, int column) {
-        if (previousFlattenIndex == array1DLength) previousFlattenIndex--;
-        if (!isOutOfBounds(row, column))
-            return isFull(previousFlattenIndex) && isOpen(row, column) && !isFull(row, column);
-        return false;
+    private void fillSite(int flattenIndex, int flattenIndexNeighbour) {
+        unionFindGrid.union(flattenIndex + 1, flattenIndexNeighbour + 1);
+        unionFindTopAndBottom.union( flattenIndex + 1, flattenIndexNeighbour + 1);
     }
 
-    private void fillSite( int flattenIndex, int flattenIndexNeighbour ) {
-        if (flattenIndex != 0)
-            unionFindGrid.union(flattenIndex+1, flattenIndexNeighbour+1);
-        else unionFindGrid.union(0,flattenIndexNeighbour+1);
-    }
-
-    private void tryToFill (int previousFlatIndex, int row, int column) {
-        int index = index(row, column);
-        if (validToFill(previousFlatIndex, row, column)) {
-            fillSite(previousFlatIndex, index);
-        }
-        if ( validToFill(index, row+1, column) ) tryToFill(index, row+1, column);
-        if ( validToFill(index, row-1, column) ) tryToFill(index, row-1, column);
-        if ( validToFill(index, row,column-1 )) tryToFill(index, row, column-1);
-        if ( validToFill(index, row,column+1) ) tryToFill(index, row, column+1);
-    }
-
-    /** returns true if index is out of bounds */
-    private boolean isOutOfBounds(int row, int column) {
-        return row < 1 || row > edgeLength || column < 1 || column > edgeLength;
+    private void tryToFill (int previousR, int previousC, int row, int column) {
+        if ( !validToFill(row, column) )
+            return;
+        fillSite(index(previousR, previousC), index(row, column));
     }
 
     public int numberOfOpenSites() {
@@ -104,39 +75,48 @@ public class Percolation {
     }
 
     public boolean percolates() {
-        for (int col=1; col<=edgeLength;col++)
-            if(isFull(1,col))
-                tryToFill(index(1, col), 2, col);
-        for (int col=1; col<=edgeLength; col++)
-            if (isFull(edgeLength, col)) return true;
-        return false;
+        return unionFindTopAndBottom.find(0) == unionFindTopAndBottom.find(array1DLength +1);
     }
 
+    private boolean isOutOfBounds(int row, int column) {
+        return row < 1 || row > edgeLength || column < 1 || column > edgeLength;
+    }
 
     public static void main(String[] args) {
-
-        Percolation p = new Percolation(25);
-        for (int i = 1; i <= p.array1DLength - (p.array1DLength / 7); i++)
-            p.open(StdRandom.uniformInt(1, p.edgeLength + 1), StdRandom.uniformInt(1, p.edgeLength + 1));
-        System.out.println(p.percolates());
-        p.print2DArray();
+        Percolation percolation = new Percolation(20);
+        for (int i = 1; i <= percolation.array1DLength - (percolation.array1DLength / 7); i++) {
+            int row = StdRandom.uniformInt(1, percolation.edgeLength + 1);
+            int col = StdRandom.uniformInt(1, percolation.edgeLength + 1);
+            percolation.open(row, col);
+            System.out.printf("Opening [row: %d][column: %d]%n", row,col );
+            percolation.print2DArray();
+        }
+        System.out.println(percolation.percolates());
+        percolation.print2DArray();
     }
+
     private void print2DArray() {
         // USING ANSI escape codes to print colored text
-        String CYAN = "\u001B[36m";
-        String RED = "\u001B[31m";
-        String ANSI_RESET = "\u001B[0m";
-        String CYAN_BKGRND = "\u001B[48;5;45m";
-        String WHT_BKGRND = "\u001B[48;5;195m";
-        String BLCK_BKGRND = "\u001B[48;5;16m";
-        for (int row=1; row<=edgeLength; row++) {
-            for (int col=1; col<=edgeLength; col++) {
-                if (isFull(row, col)) System.out.print( CYAN_BKGRND + "   " );
-                else if (!isFull(row, col) && isOpen(row, col)) System.out.print( WHT_BKGRND + "   " );
-                else System.out.print( BLCK_BKGRND + "   " );
+        int row,col;
+        for (row=0; row<=edgeLength; row++) {
+            for (col=0; col<=edgeLength; col++) {
+                String CYAN_BKGRND = "\u001B[48;5;45m";
+                String WHT_BKGRND = "\u001B[48;5;195m";
+                String BLCK_BKGRND = "\u001B[48;5;16m";
+                if (row == 0)
+                    System.out.printf("%3d", col);
+                else if(col == 0)
+                    System.out.printf("%3d ", row);
+                else if (isFull(row, col))
+                    System.out.print(CYAN_BKGRND + "   ");
+                else if (!isFull(row, col) && isOpen(row, col))
+                    System.out.print(WHT_BKGRND + "   ");
+                else
+                    System.out.print(BLCK_BKGRND + "   ");
+                String ANSI_RESET = "\u001B[0m";
                 System.out.print(ANSI_RESET);
             }
-            System.out.println("");
+            System.out.println();
         }
     }
 }
