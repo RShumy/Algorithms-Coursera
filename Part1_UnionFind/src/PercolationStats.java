@@ -2,10 +2,10 @@ import edu.princeton.cs.algs4.StdRandom;
 import edu.princeton.cs.algs4.StdStats;
 
 public class PercolationStats {
-   private double[] trials;
-   private static final double CONFIDENCE_95 = 1.92;
+   private final double[] trials;
 
     public PercolationStats(int n, int trials) {
+        if ( trials <= 0 ) throw new IllegalArgumentException("Number of Trials cannot be below 0");
         this.trials = new double[trials];
         for (int trial=0; trial<trials; trial++){
             Percolation percolationTrial = new Percolation(n);
@@ -29,11 +29,11 @@ public class PercolationStats {
     }
 
     public double confidenceLo() {
-        return mean() - (CONFIDENCE_95 * stddev() / Math.sqrt(trials.length));
+        return mean() - (1.92 * stddev() / Math.sqrt(trials.length));
     }
 
     public double confidenceHi() {
-        return mean() + (CONFIDENCE_95 * stddev() / Math.sqrt(trials.length));
+        return mean() + (1.92 * stddev() / Math.sqrt(trials.length));
     }
 
     public static void main(String[] args) {
